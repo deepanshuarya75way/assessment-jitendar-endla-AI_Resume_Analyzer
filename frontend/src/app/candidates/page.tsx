@@ -19,7 +19,33 @@ import {
 } from 'lucide-react';
 
 export default function CandidatesPage() {
-  const [candidates, setCandidates] = useState<any[]>([]);
+
+  const [candidates, setCandidates] = useState<any[]>([
+    {
+      id:1,
+      name:'John smith',
+      email:'john@gmail.com',
+      folder_name:'Demo Candidate',
+      ats_score:85,
+      experience_years:5,
+      education:'bTech computer science',
+      skills:['react','JavaScript','Python'],
+      matched_skills:['React','python'],
+      missing_skill:['Aws']
+    },
+    {
+      id:2,
+      name:'Sonu',
+      email:'Sonu@gmail.com',
+      folder_name:'Demo Candidate',
+      ats_score:95,
+      experience_years:7,
+      education:'bTech information technology',
+      skills:['react','typeScript','Node.js',],
+      matched_skills:['React','Node.js'],
+      missing_skill:['python']
+    }
+  ]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [minAts, setMinAts] = useState(0);
@@ -32,8 +58,24 @@ export default function CandidatesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedCandidate, setSelectedCandidate] = useState<any | null>(null);
-
+  const [selectedCandidates, setSelectedCandidates] = useState<any[]>([]);
+  const[showComparison,setShowComparison]=useState(false);
   const { token } = useAuth();
+
+  const handleCandidatesSelect = (candidate:any)=>{
+    setSelectedCandidates((current)=> {
+      const alreadySelected = current.some(
+        (item) => item.id=== candidate.id
+      );
+      if (alreadySelected) {
+        return current.filter((item)=>item.id !== candidate.id);
+      }
+      if (current.length >=2){
+        return current;
+      }
+      return [...current, candidate];
+    });
+  };
 
   useEffect(() => {
     fetchFolders();
@@ -44,6 +86,10 @@ export default function CandidatesPage() {
       fetchCandidates();
     }
   }, [token, search, minAts, sortBy, sortOrder, selectedFolder, page, pageSize]);
+
+  //useEffect(()=> {
+  // setSelectedCandidates([]);
+  //},[search, minAts,sortBy,sortOrder,selectedFolder ,page, pageSize]);
 
   const fetchFolders = async () => {
     try {
@@ -72,7 +118,7 @@ export default function CandidatesPage() {
       }
 
       const response = await api.get('/api/analysis/candidates', { params });
-      setCandidates(response.data.candidates || []);
+      //setCandidates(response.data.candidates || []);
       setTotalPages(response.data.total_pages || Math.ceil((response.data.total_count || response.data.total || 1) / pageSize) || 1);
       setTotalCount(response.data.total_count || response.data.total || 0);
     } catch (err) {
@@ -101,6 +147,13 @@ export default function CandidatesPage() {
             <p className="text-xs sm:text-sm font-semibold text-slate-400 mt-1">
               Showing {candidates.length} candidates per page (Page {page} of {totalPages})
             </p>
+            <button
+            onClick={()=> setShowComparison(true)}
+            disabled={selectedCandidates.length < 2}
+            className='mt-4 rounded-lg bg-cyan-500 px-4 py-2 font-blod text-white disabled:curosr-not-allowed disabled:opacity-40'
+            >
+              Compare Selected ({selectedCandidates.length}/2)
+            </button>
           </div>
         </div>
 
@@ -207,6 +260,7 @@ export default function CandidatesPage() {
             <table className="w-full text-left border-collapse min-w-[650px]">
               <thead>
                 <tr className="bg-slate-900/80 border-b border-white/10 text-[11px] font-black uppercase text-slate-400 tracking-wider">
+                  <th className="p-4 text-center">Compare</th>
                   <th className="p-4">Rank / Candidate</th>
                   <th className="p-4">Folder Batch</th>
                   <th className="p-4 text-center">ATS Match Score</th>
@@ -226,6 +280,21 @@ export default function CandidatesPage() {
                 ) : candidates.length > 0 ? (
                   candidates.map((candidate, idx) => (
                     <tr key={candidate.id} className="hover:bg-slate-800/50 transition-colors">
+                      <td className='p-4 text-center'>
+                        <input type="checkbox"
+                        checked={selectedCandidates.some(
+                          (item:any)=>item.id===candidate.id
+                        )} 
+                        disabled={
+                          selectedCandidates.length>=2 &&
+                          !selectedCandidates.some(
+                            (item:any)=>item.id === candidate.id
+                          )
+                        }
+                        onChange={()=>handleCandidatesSelect(candidate)}
+                        className='h-4 w-4 accent-cyan-500 cursor-pointer disabled:cursor-not-allowed'
+                        />
+                      </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <span className="w-7 h-7 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-black text-xs shrink-0 border border-cyan-500/20 font-mono">
@@ -281,7 +350,7 @@ export default function CandidatesPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="p-12 text-center text-xs font-bold text-slate-500 italic">
+                    <td colSpan={7} className="p-12 text-center text-xs font-bold text-slate-500 italic">
                       No candidates found matching filter criteria.
                     </td>
                   </tr>
@@ -352,6 +421,49 @@ export default function CandidatesPage() {
         />
       )}
 
+      {showComparison&&(
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4'>
+        <div className='w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/10 bg-slate-950 shadow-2xl'>
+
+        <div className='flex items-center justify-between border-b border-white/10 px-6 py-5 '>
+        <div>
+        <h2 className='text-xl font-bold text-white'>Compare Applicants</h2>
+
+        <p className='mt-1 text-sm text-slate-400'>Candidate Comparison</p>
+        </div>
+        <button onClick={()=>setShowComparison(false)} 
+        className='rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-300 hover:bg-white/10 hover:text-white'>
+          close
+        </button>
+      </div>
+
+        <div className='grid grid-cols-1 gap-6 p-6 md:grid-cols-2'>
+          {selectedCandidates.map((candidate: any)=>(
+            <div key={candidate.id} className=' rounded-xl  border border-white/10 bg-slate-900 p-6'>
+            
+            <div className='mb-3 border-b border-white/10 pb-4'>
+              <h3 className='text-xl font-bold text-cyan-400'>
+                {candidate.name || 'Unavailable'}
+              </h3>
+
+              <p>Experience: {candidate.experience_years ?? 'Unavailable'} Years </p>
+
+              <p>Ats Score: {candidate.ats_score ?? 'Unavailable'}%</p>
+              
+              <p>Skills: {candidate.skills?.join(',') || 'Unavailable'}</p>
+
+              <p>Matched Skills: {candidate.matched_skills?.join(',') || 'Unavailable'}</p>
+
+              <p>Missing Skills: {candidate.missing_skills?.join(',') || 'Unavailable'}</p>
+            
+            </div>
+            </div>
+          ))}
+          </div>
+
+          </div>
+          </div>
+      )}
       <FloatingDock />
     </div>
   );
